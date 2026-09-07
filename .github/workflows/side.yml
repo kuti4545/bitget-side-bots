@@ -1,1 +1,48 @@
+name: Yan Botlar
 
+on:
+  schedule:
+    - cron: "7-59/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: bitget-side
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  side:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Bagimliliklar
+        run: pip install -r requirements.txt
+
+      - name: Calistir
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ACCOUNT_EQUITY: "300"
+        run: python runner.py
+
+      - name: State kaydet
+        run: |
+          git config user.name "side-bots"
+          git config user.email "side-bots@users.noreply.github.com"
+          mkdir -p docs
+          git add docs/side_state.json || true
+          if git diff --cached --quiet; then
+            echo "degisiklik yok"
+          else
+            git commit -m "side-state"
+            git push
+          fi
